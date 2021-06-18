@@ -4,6 +4,7 @@ import (
 	"digitalWallet/blockchain"
 	"digitalWallet/transactions"
 	"digitalWallet/utils"
+	"digitalWallet/wallet"
 	"encoding/hex"
 	"log"
 )
@@ -16,12 +17,26 @@ type newTransactionServiceInterface interface {
 // Instantiates type transactionService
 type newTransactionService struct{}
 
+var (
+	// Instantiates the transaction services
+	Txn newTransactionServiceInterface = &newTransactionService{}
+)
+
+// NewTransaction creates new transaction
 func (n newTransactionService) NewTransaction(from, to string, amount int, c *blockchain.BlockChain) *transactions.Transaction {
 	var inputs []transactions.TxInput
 	var outputs []transactions.TxOutput
 
+	// Creates wallets list
+	wallets, err := wallet.CreateWallets()
+	utils.HandleError(err)
+
+	// Gets gets wallet based on address
+	w := wallets.GetWallet(from)
+	pubKeyHash := wallet.PublicKeyHash(w.PublicKey)
+
 	// Finds Spendable Outputs
-	acc, validOutputs := c.FindSpendableOutputs(from, amount)
+	acc, validOutputs := c.FindSpendableOutputs(pubKeyHash, amount)
 
 	// Checks if there is enough money to send the amount
 	if acc < amount {
@@ -34,28 +49,25 @@ func (n newTransactionService) NewTransaction(from, to string, amount int, c *bl
 		utils.HandleError(err)
 
 		for _, out := range outs {
-			input := transactions.TxInput{txID, out, from}
+			input := transactions.TxInput{txID, out, nil, w.PublicKey}
 			inputs = append(inputs, input)
 		}
 	}
 
-	outputs = append(outputs, transactions.TxOutput{amount, to})
+	outputs = append(outputs, *transactions.NewTXOutput(amount, to))
 
 	// Make new outputs from the difference
 	if acc > amount {
-		outputs = append(outputs, transactions.TxOutput{acc - amount, from})
+		outputs = append(outputs, *transactions.NewTXOutput(acc-amount, from))
 	}
 
 	// Initializes a new transaction with all the new inputs and outputs
 	tx := transactions.Transaction{nil, inputs, outputs}
 
 	// Sets a new ID, and returns it
-	tx.SetID()
+	tx.Hash()
 
+	// Signs the transaction
+	c.SignTransaction(&tx, w.PrivateKey)
 	return &tx
 }
-
-var (
-	// Instantiates the transaction services
-	Txn newTransactionServiceInterface = &newTransactionService{}
-)

@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -90,4 +91,18 @@ func MakeWallet() *Wallet {
 	privateKey, publicKey := NewKeyPair()
 	wallet := Wallet{privateKey, publicKey}
 	return &wallet
+}
+
+// ValidateAddress validates the address...
+func ValidateAddress(address string) bool {
+	// Decodes address
+	pubKeyHash := utils.Base58Decode([]byte(address))
+	actualChecksum := pubKeyHash[len(pubKeyHash)-checksumLength:]
+	version := pubKeyHash[0]
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-checksumLength]
+
+	// Runs sha256 on the versioned hash twice To create a checksum
+	targetChecksum := Checksum(append([]byte{version}, pubKeyHash...))
+
+	return bytes.Compare(actualChecksum, targetChecksum) == 0
 }

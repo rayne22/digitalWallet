@@ -4,6 +4,7 @@ import (
 	"digitalWallet/blockchain"
 	"digitalWallet/services"
 	"digitalWallet/transactions"
+	"digitalWallet/utils"
 	"digitalWallet/wallet"
 	"flag"
 	"fmt"
@@ -45,6 +46,10 @@ func (cli *CommandLine) ValidateArgs() {
 
 // CreateBlockChain creates blockchain
 func (cli *CommandLine) CreateBlockChain(address string) {
+	// Validates the address
+	if !wallet.ValidateAddress(address) {
+		log.Panic("Address is not Valid")
+	}
 	// Initializes initial block chain
 	newChain := blockchain.InitBlockChain(address)
 	_ = newChain.Database.Close()
@@ -53,15 +58,22 @@ func (cli *CommandLine) CreateBlockChain(address string) {
 
 // GetBalance gets account balance
 func (cli *CommandLine) GetBalance(address string) {
+	// Validates the address
+	if !wallet.ValidateAddress(address) {
+		log.Panic("Address is not Valid")
+	}
 
 	// Adds to an existing blockchain
 	chain := blockchain.ContinueBlockChain(address)
 	defer chain.Database.Close()
 
 	balance := 0
+
+	pubKeyHash := utils.Base58Decode([]byte(address))
+	pubKeyHash = pubKeyHash[1 : len(pubKeyHash)-4]
+
 	// Finds all transaction outputs
-	UTXOs := chain.FindUTXO(address)
-	fmt.Println("TEST", UTXOs)
+	UTXOs := chain.FindUTXO(pubKeyHash)
 
 	for _, out := range UTXOs {
 		balance += out.Value
@@ -72,6 +84,15 @@ func (cli *CommandLine) GetBalance(address string) {
 
 // Send sends money to address
 func (cli *CommandLine) Send(from, to string, amount int) {
+	// Validates the address
+	if !wallet.ValidateAddress(from) {
+		log.Panic("Address is not Valid")
+	}
+
+	// Validates the address
+	if !wallet.ValidateAddress(to) {
+		log.Panic("Address is not Valid")
+	}
 
 	// Adds to an existing blockchain
 	chain := blockchain.ContinueBlockChain(from)
@@ -96,6 +117,9 @@ func (cli *CommandLine) printChain() {
 		fmt.Printf("hash: %x\n", block.Hash)
 		pow := blockchain.NewProofOfWork(block)
 		fmt.Printf("Pow: %s\n", strconv.FormatBool(pow.Validate()))
+		for _, tx := range block.Transactions {
+			fmt.Println(tx)
+		}
 		fmt.Println()
 		// This works because the Genesis block has no PrevHash to point to.
 		if len(block.PrevHash) == 0 {
