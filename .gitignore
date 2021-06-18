@@ -1,0 +1,8 @@
+*.log
+*.idea
+*.vscode
+*.png
+*.jpg
+*.jfif
+.env
+tmp
