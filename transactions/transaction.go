@@ -130,11 +130,11 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 		return
 	}
 
-	for _, in := range tx.Inputs {
-		if prevTXs[hex.EncodeToString(in.ID)].ID == nil {
-			log.Panic("ERROR: Previous transaction is not correct")
-		}
-	}
+	//for _, in := range tx.Inputs {
+	//	if prevTXs[hex.EncodeToString(in.ID)].ID == nil {
+	//		log.Panic("ERROR: Previous transaction is not correct")
+	//	}
+	//}
 
 	// Creates a transaction copy
 	txCopy := tx.TrimmedCopy()
@@ -154,6 +154,8 @@ func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transac
 
 	}
 }
+
+
 
 // Verify verifies the transaction
 func (tx *Transaction) Verify(prevTXs map[string]Transaction) bool {
